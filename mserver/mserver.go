@@ -1,4 +1,4 @@
-package main
+package mserver
 
 import (
 	"crypto"
@@ -30,16 +30,6 @@ func init() {
 	}
 	out, _ := exec.Command("hostname").Output()
 	userAndHostname += strings.TrimSpace(string(out))
-}
-
-func NewServer(certPath, keyPath string) *server {
-	s := &server{}
-
-	s.LoadCert(certPath)
-	s.LoadKey(keyPath)
-	s.cache = make(map[string]*tls.Certificate)
-
-	return s
 }
 
 type server struct {
@@ -74,7 +64,13 @@ func (s *server) LoadCert(path string) error {
 	return err
 }
 
-func (s *server) Listen(address string) error {
+func ListenAndServeTLS(address, certPath, keyPath string, mux http.Handler) error {
+	s := &server{}
+
+	s.LoadCert(certPath)
+	s.LoadKey(keyPath)
+	s.cache = make(map[string]*tls.Certificate)
+
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		return err
@@ -86,11 +82,7 @@ func (s *server) Listen(address string) error {
 	})
 	defer l.Close()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("<h1>Hello World</h1>"))
-	})
-
-	return http.Serve(l, nil)
+	return http.Serve(l, mux)
 }
 
 func (s *server) NewCertificate(serverName string) (*tls.Certificate, error) {
