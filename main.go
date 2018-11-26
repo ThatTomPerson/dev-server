@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -19,10 +20,21 @@ import (
 
 var port = flag.String("port", "2000", "port to listen on")
 var dev = flag.Bool("dev", false, "enable debugging libraries")
+var startFpm = flag.Bool("start-fpm", false, "start fpm")
 
 func Exists(name string) bool {
 	s, err := os.Stat(name)
 	return !os.IsNotExist(err) && !s.IsDir()
+}
+
+func StartFpm() {
+	child := exec.Command("php-fpm", "--nodaemonize")
+
+	child.Stdout = os.Stdout
+	child.Stderr = os.Stderr
+
+	logrus.Info("Running php-fpm")
+	logrus.Fatal(child.Run())
 }
 
 func main() {
@@ -32,6 +44,10 @@ func main() {
 		autopprof.Capture(autopprof.CPUProfile{
 			Duration: 15 * time.Second,
 		})
+	}
+
+	if *startFpm {
+		go StartFpm()
 	}
 
 	fcgiAddress := os.Getenv("FASTCGI_ADDR")
