@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -15,9 +16,6 @@ import (
 
 	"github.com/rakyll/autopprof"
 )
-
-var cert = flag.String("cert", "rootCA.pem", "path to the root CA cert")
-var key = flag.String("key", "rootCA-key.pem", "path to the root CA key")
 
 var port = flag.String("port", "2000", "port to listen on")
 
@@ -33,7 +31,12 @@ func main() {
 		Duration: 15 * time.Second,
 	})
 
-	connFactory := gofast.SimpleConnFactory("tcp", "127.0.0.1:9000")
+	fcgiAddress := os.Getenv("FASTCGI_ADDR")
+	if fcgiAddress == "" {
+		fcgiAddress = "127.0.0.1:9000"
+	}
+
+	connFactory := gofast.SimpleConnFactory("tcp", fcgiAddress)
 	clientFactory := gofast.SimpleClientFactory(connFactory, 0)
 
 	pwd, _ := os.Getwd()
@@ -65,9 +68,41 @@ func main() {
 			clientFactory,
 		).ServeHTTP(w, r)
 	})
-
+	cert, key := getCACerts()
 	address := fmt.Sprintf(":%s", *port)
-	logrus.Fatal(mserver.ListenAndServeTLS(address, *cert, *key, nil))
+	logrus.Fatal(mserver.ListenAndServeTLS(address, cert, key, nil))
+}
+
+func getCACerts() (string, string) {
+	root := getCAROOT()
+	return filepath.Join(root, "rootCA.pem"), filepath.Join(root, "rootCA-key.pem")
+}
+
+func getCAROOT() string {
+	if env := os.Getenv("CAROOT"); env != "" {
+		return env
+	}
+
+	var dir string
+	switch {
+	case runtime.GOOS == "windows":
+		dir = os.Getenv("LocalAppData")
+	case os.Getenv("XDG_DATA_HOME") != "":
+		dir = os.Getenv("XDG_DATA_HOME")
+	case runtime.GOOS == "darwin":
+		dir = os.Getenv("HOME")
+		if dir == "" {
+			return ""
+		}
+		dir = filepath.Join(dir, "Library", "Application Support")
+	default: // Unix
+		dir = os.Getenv("HOME")
+		if dir == "" {
+			return ""
+		}
+		dir = filepath.Join(dir, ".local", "share")
+	}
+	return filepath.Join(dir, "mkcert")
 }
 
 func FileFSMiddleware(root string) gofast.Middleware {
