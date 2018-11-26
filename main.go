@@ -19,8 +19,6 @@ import (
 var cert = flag.String("cert", "rootCA.pem", "path to the root CA cert")
 var key = flag.String("key", "rootCA-key.pem", "path to the root CA key")
 
-var 
-
 var port = flag.String("port", "2000", "port to listen on")
 
 func Exists(name string) bool {
@@ -35,7 +33,7 @@ func main() {
 		Duration: 15 * time.Second,
 	})
 
-	connFactory := gofast.SimpleConnFactory("unix", "/Users/thomasalbrighton/.config/valet/valet.sock")
+	connFactory := gofast.SimpleConnFactory("tcp", "127.0.0.1:9000")
 	clientFactory := gofast.SimpleClientFactory(connFactory, 0)
 
 	pwd, _ := os.Getwd()

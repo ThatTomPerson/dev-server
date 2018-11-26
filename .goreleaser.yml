@@ -1,0 +1,29 @@
+project_name: dev-server
+
+build:
+  main: main.go
+  binary: remote
+  goos:
+    - darwin
+    - linux
+    - windows
+  goarch:
+    - amd64
+    - 386
+
+  ignore:
+    - goos: darwin
+      goarch: 386
+  ldflags:
+    -X main.version=v{{.Version}}
+
+archive:
+  format_overrides:
+    - goos: windows
+      format: zip
+
+brew:
+  # Reporitory to push the tap to.
+  github:
+    owner: ThatTomPerson
+    name: homebrew-tap
