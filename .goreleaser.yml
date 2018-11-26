@@ -2,7 +2,7 @@ project_name: dev-server
 
 build:
   main: main.go
-  binary: remote
+  binary: dev-server
   goos:
     - darwin
     - linux
