@@ -27,3 +27,23 @@ brew:
   github:
     owner: ThatTomPerson
     name: homebrew-tap
+
+
+dockers:
+  # You can have multiple Docker images.
+  -
+    # GOOS of the built binary that should be used.
+    goos: linux
+    # GOARCH of the built binary that should be used.
+    goarch: amd64
+
+    binary: dev-server
+    image_templates:
+    - "ttpd/{{.ProjectName}}:v{{ .Tag }}"
+    - "ttpd/{{.ProjectName}}:v{{ .Major }}"
+    - "ttpd/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}"
+    - "ttpd/{{.ProjectName}}:latest"
+    build_flag_templates:
+    - "--label=org.label-schema.schema-version=1.0"
+    - "--label=org.label-schema.version={{.Version}}"
+    - "--label=org.label-schema.name={{.ProjectName}}"
