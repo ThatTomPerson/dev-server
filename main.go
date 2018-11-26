@@ -18,6 +18,7 @@ import (
 )
 
 var port = flag.String("port", "2000", "port to listen on")
+var dev = flag.Bool("dev", false, "enable debugging libraries")
 
 func Exists(name string) bool {
 	s, err := os.Stat(name)
@@ -27,9 +28,11 @@ func Exists(name string) bool {
 func main() {
 	flag.Parse()
 
-	autopprof.Capture(autopprof.CPUProfile{
-		Duration: 15 * time.Second,
-	})
+	if *dev {
+		autopprof.Capture(autopprof.CPUProfile{
+			Duration: 15 * time.Second,
+		})
+	}
 
 	fcgiAddress := os.Getenv("FASTCGI_ADDR")
 	if fcgiAddress == "" {

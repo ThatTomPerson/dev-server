@@ -81,7 +81,7 @@ func ListenAndServeTLS(address, certPath, keyPath string, mux http.Handler) erro
 		GetCertificate: s.GetCertificate,
 	})
 	defer l.Close()
-
+	logrus.Infof("listening on %s", address)
 	return http.Serve(l, mux)
 }
 
