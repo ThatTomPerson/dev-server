@@ -18,9 +18,13 @@ import (
 	"github.com/rakyll/autopprof"
 )
 
+var version = "master"
+
 var port = flag.String("port", "2000", "port to listen on")
 var dev = flag.Bool("dev", false, "enable debugging libraries")
 var startFpm = flag.Bool("start-fpm", false, "start fpm")
+
+var printVersion = flag.Bool("version", false, "display version and exit")
 
 func Exists(name string) bool {
 	s, err := os.Stat(name)
@@ -39,6 +43,11 @@ func StartFpm() {
 
 func main() {
 	flag.Parse()
+
+	if *printVersion {
+		logrus.Printf("dev-server v%s", version)
+		return
+	}
 
 	if *dev {
 		autopprof.Capture(autopprof.CPUProfile{

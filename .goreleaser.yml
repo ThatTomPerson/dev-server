@@ -27,6 +27,10 @@ brew:
   github:
     owner: ThatTomPerson
     name: homebrew-tap
+  dependencies:
+    - mkcert
+  test: |
+    system "#{bin}/dev-server -version"
 
 
 dockers:
