@@ -79,11 +79,10 @@ func main() {
 			return
 		}
 
+		r.Host = fmt.Sprintf("%s:%s", r.TLS.ServerName, *port)
+
 		gofast.NewHandler(
-			gofast.Chain(
-				// FileFSMiddleware(pwd),
-				gofast.NewFileEndpoint(filepath.Join(root, "index.php")),
-			)(gofast.BasicSession),
+			gofast.NewFileEndpoint(filepath.Join(root, "index.php"))(gofast.BasicSession),
 			clientFactory,
 		).ServeHTTP(w, r)
 	})
