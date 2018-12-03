@@ -17,11 +17,6 @@ build:
   env:
     - CGO_ENABLED=0
 
-archive:
-  format_overrides:
-    - goos: windows
-      format: zip
-
 brew:
   # Reporitory to push the tap to.
   github:
