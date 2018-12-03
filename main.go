@@ -1,7 +1,6 @@
 package main // import "ttp.sh/dev-server"
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,19 +15,24 @@ import (
 	"ttp.sh/dev-server/devtls"
 
 	reaper "github.com/ramr/go-reaper"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var version = "master"
 
-var port = flag.String("port", "2000", "port to listen on")
-var startFpmFlag = flag.Bool("start-fpm", false, "start fpm")
-var printVersion = flag.Bool("version", false, "display version and exit")
+var (
+	app = kingpin.New("dev-server", "tls terminator server that generates valid certs based on SNI and forwards requests to a fastcgi")
 
-var pwd = ""
+	startCmd  = app.Command("start", "start the terminator server")
+	supervise = startCmd.Flag("supervise", "start and supervise a php-fpm server").Bool()
+	host      = startCmd.Flag("server", "Server address.").Default("0.0.0.0").IP()
+	port      = startCmd.Flag("port", "start and supervise a php-fpm server").Default("2000").String()
+	reap      = startCmd.Flag("init", "watch for and reap zombie processes").Default("false").Bool()
+	path      = startCmd.Flag("root", "root directory to look for sites").Default(".").ExistingDir()
 
-func init() {
-	pwd, _ = os.Getwd()
-}
+	versionCmd = app.Command("version", "display the version and exit")
+)
 
 func Exists(name string) bool {
 	s, err := os.Stat(name)
@@ -49,24 +53,20 @@ func getSiteRoot(r *http.Request) string {
 	parts := strings.Split(r.TLS.ServerName, ".")
 	site := parts[len(parts)-2]
 
-	return filepath.Join(pwd, "sites", site, "public")
+	return filepath.Join(*path, "sites", site, "public")
 }
 
-func main() {
-	flag.Parse()
-	if *printVersion {
-		logrus.Printf("dev-server v%s", version)
-		return
-	}
-
-	// if running as PID we are going to reap zombie processes
-	if os.Getpid() == 1 {
-		logrus.Info("Running as init PID 1, Starting process reaper")
+func start(startCmd *kingpin.CmdClause) {
+	if *reap {
 		go reaper.Reap()
 	}
 
-	if *startFpmFlag {
+	if *supervise {
 		go startFpm()
+	}
+
+	if (*path)[0] == '.' {
+		*path, _ = filepath.Abs(*path)
 	}
 
 	fcgiAddress := os.Getenv("FASTCGI_ADDR")
@@ -84,6 +84,7 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		root := getSiteRoot(r)
+		logrus.Infof("serving from: %s", root)
 		uri := filepath.Join(root, r.RequestURI)
 
 		if filepath.Ext(uri) != ".php" && Exists(uri) {
@@ -99,8 +100,17 @@ func main() {
 		).ServeHTTP(w, r)
 	})
 	cert, key := getCACerts()
-	address := fmt.Sprintf(":%s", *port)
+	address := fmt.Sprintf("%s:%s", *host, *port)
 	logrus.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
+}
+
+func main() {
+	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
+	case versionCmd.FullCommand():
+		logrus.Printf("dev-server v%s", version)
+	case startCmd.FullCommand():
+		start(startCmd)
+	}
 }
 
 func getCACerts() ([]byte, []byte) {
