@@ -6,7 +6,6 @@ build:
   goos:
     - darwin
     - linux
-    - windows
   goarch:
     - amd64
     - 386
@@ -15,6 +14,8 @@ build:
       goarch: 386
   ldflags:
     -X main.version=v{{.Version}}
+  env:
+    - CGO_ENABLED=0
 
 archive:
   format_overrides:

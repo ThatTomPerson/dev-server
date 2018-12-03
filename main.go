@@ -14,6 +14,8 @@ import (
 	"github.com/yookoala/gofast"
 	"ttp.sh/dev-server/devtls"
 
+	reaper "github.com/ramr/go-reaper"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -56,7 +58,7 @@ func getSiteRoot(r *http.Request) string {
 
 func start(startCmd *kingpin.CmdClause) {
 	if *reap {
-		go Reaper()
+		go reaper.Reap()
 	}
 
 	if *supervise {

@@ -1,6 +1,6 @@
 // +build !windows
 
-package main
+package main // import "ttp.sh/dev-server"
 
 import reaper "github.com/ramr/go-reaper"
 
