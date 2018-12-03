@@ -25,11 +25,11 @@ var (
 	app = kingpin.New("dev-server", "tls terminator server that generates valid certs based on SNI and forwards requests to a fastcgi")
 
 	startCmd  = app.Command("start", "start the terminator server")
-	supervise = startCmd.Flag("supervise", "start and supervise a php-fpm server").Bool()
-	host      = startCmd.Flag("server", "Server address.").Default("0.0.0.0").IP()
-	port      = startCmd.Flag("port", "start and supervise a php-fpm server").Default("2000").String()
-	reap      = startCmd.Flag("init", "watch for and reap zombie processes").Default("false").Bool()
-	path      = startCmd.Flag("root", "root directory to look for sites").Default(".").ExistingDir()
+	supervise = startCmd.Flag("supervise", "start and supervise a php-fpm server").Short('s').Bool()
+	host      = startCmd.Flag("server", "Server address.").Default("0.0.0.0").Short('h').IP()
+	port      = startCmd.Flag("port", "start and supervise a php-fpm server").Short('p').Default("2000").String()
+	reap      = startCmd.Flag("init", "watch for and reap zombie processes").Short('i').Default("false").Bool()
+	path      = startCmd.Flag("root", "root directory to look for sites").Short('d').Default(".").ExistingDir()
 
 	versionCmd = app.Command("version", "display the version and exit")
 )
