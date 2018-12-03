@@ -1,3 +1,5 @@
 *.pem
 sites/*
 dist
+dev-server
+dev-server.exe
