@@ -2,4 +2,8 @@
 
 package main
 
-func Reap() {}
+import "github.com/sirupsen/logrus"
+
+func Reap() {
+	logrus.Info("Reaping is not supported on windows")
+}
