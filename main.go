@@ -56,7 +56,7 @@ func getSiteRoot(r *http.Request) string {
 
 func start(startCmd *kingpin.CmdClause) {
 	if *reap {
-		go Reap()
+		go Reaper()
 	}
 
 	if *supervise {
