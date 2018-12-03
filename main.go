@@ -3,27 +3,25 @@ package main // import "ttp.sh/dev-server"
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/yookoala/gofast"
-	"ttp.sh/dev-server/mserver"
+	"ttp.sh/dev-server/devtls"
 
-	"github.com/rakyll/autopprof"
+	reaper "github.com/ramr/go-reaper"
 )
 
 var version = "master"
 
 var port = flag.String("port", "2000", "port to listen on")
-var dev = flag.Bool("dev", false, "enable debugging libraries")
 var startFpmFlag = flag.Bool("start-fpm", false, "start fpm")
-
 var printVersion = flag.Bool("version", false, "display version and exit")
 
 var pwd = ""
@@ -56,16 +54,15 @@ func getSiteRoot(r *http.Request) string {
 
 func main() {
 	flag.Parse()
-
 	if *printVersion {
 		logrus.Printf("dev-server v%s", version)
 		return
 	}
 
-	if *dev {
-		autopprof.Capture(autopprof.CPUProfile{
-			Duration: 15 * time.Second,
-		})
+	// if running as PID we are going to reap zombie processes
+	if os.Getpid() == 1 {
+		logrus.Info("Running as init PID 1, Starting process reaper")
+		go reaper.Reap()
 	}
 
 	if *startFpmFlag {
@@ -103,12 +100,24 @@ func main() {
 	})
 	cert, key := getCACerts()
 	address := fmt.Sprintf(":%s", *port)
-	logrus.Fatal(mserver.ListenAndServeTLS(address, cert, key, nil))
+	logrus.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
 }
 
-func getCACerts() (string, string) {
+func getCACerts() ([]byte, []byte) {
 	root := getCAROOT()
-	return filepath.Join(root, "rootCA.pem"), filepath.Join(root, "rootCA-key.pem")
+	certPath := filepath.Join(root, "rootCA.pem")
+	keyPath := filepath.Join(root, "rootCA-key.pem")
+
+	cert, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		logrus.Fatal("Couldn't find cert: %s", certPath)
+	}
+	key, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		logrus.Fatal("Couldn't find key: %s", keyPath)
+	}
+
+	return cert, key
 }
 
 func getCAROOT() string {

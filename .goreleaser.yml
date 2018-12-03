@@ -10,7 +10,6 @@ build:
   goarch:
     - amd64
     - 386
-
   ignore:
     - goos: darwin
       goarch: 386
@@ -29,18 +28,13 @@ brew:
     name: homebrew-tap
   dependencies:
     - mkcert
-  test: |
-    system "#{bin}/dev-server -version"
-
+  test: system "#{bin}/dev-server -version"
 
 dockers:
   # You can have multiple Docker images.
   -
-    # GOOS of the built binary that should be used.
     goos: linux
-    # GOARCH of the built binary that should be used.
     goarch: amd64
-
     binary: dev-server
     image_templates:
     - "ttpd/{{.ProjectName}}:v{{ .Tag }}"
