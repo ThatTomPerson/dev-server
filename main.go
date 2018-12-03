@@ -22,16 +22,22 @@ var version = "master"
 
 var port = flag.String("port", "2000", "port to listen on")
 var dev = flag.Bool("dev", false, "enable debugging libraries")
-var startFpm = flag.Bool("start-fpm", false, "start fpm")
+var startFpmFlag = flag.Bool("start-fpm", false, "start fpm")
 
 var printVersion = flag.Bool("version", false, "display version and exit")
+
+var pwd = ""
+
+func init() {
+	pwd, _ = os.Getwd()
+}
 
 func Exists(name string) bool {
 	s, err := os.Stat(name)
 	return !os.IsNotExist(err) && !s.IsDir()
 }
 
-func StartFpm() {
+func startFpm() {
 	child := exec.Command("php-fpm", "--nodaemonize")
 
 	child.Stdout = os.Stdout
@@ -39,6 +45,13 @@ func StartFpm() {
 
 	logrus.Info("Running php-fpm")
 	logrus.Fatal(child.Run())
+}
+
+func getSiteRoot(r *http.Request) string {
+	parts := strings.Split(r.TLS.ServerName, ".")
+	site := parts[len(parts)-2]
+
+	return filepath.Join(pwd, "sites", site, "public")
 }
 
 func main() {
@@ -55,8 +68,8 @@ func main() {
 		})
 	}
 
-	if *startFpm {
-		go StartFpm()
+	if *startFpmFlag {
+		go startFpm()
 	}
 
 	fcgiAddress := os.Getenv("FASTCGI_ADDR")
@@ -67,20 +80,13 @@ func main() {
 	connFactory := gofast.SimpleConnFactory("tcp", fcgiAddress)
 	clientFactory := gofast.SimpleClientFactory(connFactory, 0)
 
-	pwd, _ := os.Getwd()
-
 	// if file exists and ext not .php
 	// 		echo file
 	// else
 	// 		pass to fpm
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
-		parts := strings.Split(r.TLS.ServerName, ".")
-		site := parts[len(parts)-2]
-
-		root := filepath.Join(pwd, "sites", site, "public")
-
+		root := getSiteRoot(r)
 		uri := filepath.Join(root, r.RequestURI)
 
 		if filepath.Ext(uri) != ".php" && Exists(uri) {
