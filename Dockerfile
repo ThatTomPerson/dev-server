@@ -10,7 +10,7 @@ RUN apk add --virtual .phpize-deps $PHPIZE_DEPS \
     && apk add make git \
     && rm -rf /var/cache/apk/*;
 
-RUN printf "\nmax_execution_time > 0\n" >> /usr/local/etc/php-fpm.d/docker.conf
+RUN printf "max_execution_time > 0\n" > /usr/local/etc/php/conf.d/docker-php-development.ini
 
 COPY dev-server /usr/local/bin/
 
