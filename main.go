@@ -51,7 +51,7 @@ func startFpm() {
 
 func getSiteRoot(r *http.Request) string {
 	parts := strings.Split(r.TLS.ServerName, ".")
-	site := parts[len(parts)-2]
+	site := parts[len(parts)-3]
 
 	return filepath.Join(*path, "sites", site, "public")
 }
