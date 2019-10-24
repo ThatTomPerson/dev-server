@@ -15,5 +15,5 @@ RUN printf "max_execution_time = 0\nmemory_limit = 5G\n" > /usr/local/etc/php/co
 COPY dev-server /usr/local/bin/
 
 EXPOSE 443
-CMD ["/usr/local/bin/dev-server", "start", "--port", "443", "--supervise", "--init"]
+CMD ["/usr/local/bin/dev-server", "start", "-port", "443", "-supervise", "-init"]
 
