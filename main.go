@@ -68,7 +68,6 @@ func main() {
 		reap,
 		supervise,
 		path,
-		os.Args,
 	)
 
 	if reap {
