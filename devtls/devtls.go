@@ -107,7 +107,7 @@ func (s *CertificateGenerator) NewCertificate(h *tls.ClientHelloInfo) (*tls.Cert
 		},
 
 		NotAfter:  time.Now().AddDate(10, 0, 0),
-		NotBefore: time.Now(),
+		NotBefore: time.Now().AddDate(-10, 0, 0),
 
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
@@ -115,14 +115,14 @@ func (s *CertificateGenerator) NewCertificate(h *tls.ClientHelloInfo) (*tls.Cert
 		DNSNames:              []string{h.ServerName},
 	}
 	pub := priv.PublicKey
-	cert, err := x509.CreateCertificate(rand.Reader, tpl, s.config.Cert, &pub, s.config.Key)
+	derBytes, err := x509.CreateCertificate(rand.Reader, tpl, s.config.Cert, &pub, s.config.Key)
+	certPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 
-	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode certificate key: %v", err)
 	}
-	keyPem := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER})
-	certPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
+	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	keyPem := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privBytes})
 
 	c, err := tls.X509KeyPair(certPem, keyPem)
 	if err != nil {

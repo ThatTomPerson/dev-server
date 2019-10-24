@@ -16,22 +16,17 @@ import (
 
 	reaper "github.com/ramr/go-reaper"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"flag"
 )
 
 var version = "master"
 
 var (
-	app = kingpin.New("dev-server", "tls terminator server that generates valid certs based on SNI and forwards requests to a fastcgi")
-
-	startCmd  = app.Command("start", "start the terminator server")
-	supervise = startCmd.Flag("supervise", "start and supervise a php-fpm server").Short('s').Bool()
-	host      = startCmd.Flag("server", "Server address.").Default("0.0.0.0").Short('h').IP()
-	port      = startCmd.Flag("port", "start and supervise a php-fpm server").Short('p').Default("2000").String()
-	reap      = startCmd.Flag("init", "watch for and reap zombie processes").Short('i').Default("false").Bool()
-	path      = startCmd.Flag("root", "root directory to look for sites").Short('d').Default(".").ExistingDir()
-
-	versionCmd = app.Command("version", "display the version and exit")
+	host      = flag.String("host", "0.0.0.0", "host to listen on")
+	port      = flag.String("port", "2000", "port to listen on")
+	reap      = flag.Bool("init", false, "watch for and reap zombie processes")
+	supervise = flag.Bool("supervise", false, "start and supervise a php-fpm server")
+	path      = flag.String("root", ".", "root directory to look for sites")
 )
 
 func Exists(name string) bool {
@@ -51,12 +46,13 @@ func startFpm() {
 
 func getSiteRoot(r *http.Request) string {
 	parts := strings.Split(r.TLS.ServerName, ".")
-	site := parts[len(parts)-3]
+	site := parts[len(parts)-2]
 
 	return filepath.Join(*path, "sites", site, "public")
 }
 
-func start(startCmd *kingpin.CmdClause) {
+func main() {
+	flag.Parse()
 	if *reap {
 		go reaper.Reap()
 	}
@@ -76,11 +72,6 @@ func start(startCmd *kingpin.CmdClause) {
 
 	connFactory := gofast.SimpleConnFactory("tcp", fcgiAddress)
 	clientFactory := gofast.SimpleClientFactory(connFactory, 0)
-
-	// if file exists and ext not .php
-	// 		echo file
-	// else
-	// 		pass to fpm
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		root := getSiteRoot(r)
@@ -102,15 +93,6 @@ func start(startCmd *kingpin.CmdClause) {
 	cert, key := getCACerts()
 	address := fmt.Sprintf("%s:%s", *host, *port)
 	logrus.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
-}
-
-func main() {
-	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
-	case versionCmd.FullCommand():
-		logrus.Printf("dev-server v%s", version)
-	case startCmd.FullCommand():
-		start(startCmd)
-	}
 }
 
 func getCACerts() ([]byte, []byte) {
