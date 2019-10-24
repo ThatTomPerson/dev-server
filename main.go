@@ -23,12 +23,20 @@ import (
 var version = "master"
 
 var (
-	host      = flag.String("host", "0.0.0.0", "host to listen on")
-	port      = flag.String("port", "2000", "port to listen on")
-	reap      = flag.Bool("init", false, "watch for and reap zombie processes")
-	supervise = flag.Bool("supervise", false, "start and supervise a php-fpm server")
-	path      = flag.String("root", ".", "root directory to look for sites")
+	host      string
+	port      string
+	reap      bool
+	supervise bool
+	path      string
 )
+
+func init() {
+	flag.StringVar(&host, "host", "0.0.0.0", "host to listen on")
+	flag.StringVar(&port, "port", "2000", "port to listen on")
+	flag.BoolVar(&reap, "init", false, "watch for and reap zombie processes")
+	flag.BoolVar(&supervise, "supervise", false, "start and supervise a php-fpm server")
+	flag.StringVar(&path, "root", ".", "root directory to look for sites")
+}
 
 func Exists(name string) bool {
 	s, err := os.Stat(name)
@@ -49,7 +57,7 @@ func getSiteRoot(r *http.Request) string {
 	parts := strings.Split(r.TLS.ServerName, ".")
 	site := parts[len(parts)-2]
 
-	return filepath.Join(*path, "sites", site, "public")
+	return filepath.Join(path, "sites", site, "public")
 }
 
 func main() {
@@ -60,18 +68,19 @@ func main() {
 		reap,
 		supervise,
 		path,
+		os.Args,
 	)
 
-	if *reap {
+	if reap {
 		go reaper.Reap()
 	}
 
-	if *supervise {
+	if supervise {
 		go startFpm()
 	}
 
-	if (*path)[0] == '.' {
-		*path, _ = filepath.Abs(*path)
+	if (path)[0] == '.' {
+		path, _ = filepath.Abs(path)
 	}
 
 	fcgiAddress := os.Getenv("FASTCGI_ADDR")
@@ -92,7 +101,7 @@ func main() {
 			return
 		}
 
-		r.Host = fmt.Sprintf("%s:%s", r.TLS.ServerName, *port)
+		r.Host = fmt.Sprintf("%s:%s", r.TLS.ServerName, port)
 
 		gofast.NewHandler(
 			gofast.NewFileEndpoint(filepath.Join(root, "index.php"))(gofast.BasicSession),
@@ -100,7 +109,7 @@ func main() {
 		).ServeHTTP(w, r)
 	})
 	cert, key := getCACerts()
-	address := fmt.Sprintf("%s:%s", *host, *port)
+	address := fmt.Sprintf("%s:%s", host, port)
 	logrus.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
 }
 
