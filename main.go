@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 	"github.com/yookoala/gofast"
 	"ttp.sh/dev-server/devtls"
@@ -53,6 +54,14 @@ func getSiteRoot(r *http.Request) string {
 
 func main() {
 	flag.Parse()
+	spew.Dump(
+		host,
+		port,
+		reap,
+		supervise,
+		path,
+	)
+
 	if *reap {
 		go reaper.Reap()
 	}
