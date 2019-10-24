@@ -8,9 +8,9 @@ RUN apk add --virtual .phpize-deps $PHPIZE_DEPS \
     && apk add make git libzip-dev \
     && rm -rf /var/cache/apk/*;
 
-RUN docker-php-ext-install pdo pdo_mysql zip
+RUN docker-php-ext-install pdo pdo_mysql zip opcache
 
-RUN printf "max_execution_time = 0\nmemory_limit = 5G\n" > /usr/local/etc/php/conf.d/docker-php-development.ini
+RUN printf "max_execution_time = 0\n\n" > /usr/local/etc/php/conf.d/docker-php-development.ini
 
 COPY dev-server /usr/local/bin/
 
