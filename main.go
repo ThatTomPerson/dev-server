@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 	"github.com/yookoala/gofast"
 	"ttp.sh/dev-server/devtls"
@@ -62,14 +62,6 @@ func getSiteRoot(r *http.Request) string {
 
 func main() {
 	flag.Parse()
-	spew.Dump(
-		host,
-		port,
-		reap,
-		supervise,
-		path,
-	)
-
 	if reap {
 		go reaper.Reap()
 	}
@@ -88,11 +80,15 @@ func main() {
 	}
 
 	connFactory := gofast.SimpleConnFactory("tcp", fcgiAddress)
-	clientFactory := gofast.SimpleClientFactory(connFactory, 0)
+
+	pool := gofast.NewClientPool(
+		gofast.SimpleClientFactory(connFactory, 0),
+		10,             // buffer size for pre-created client-connection
+		30*time.Second, // life span of a client before expire
+	)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		root := getSiteRoot(r)
-		logrus.Infof("serving from: %s", root)
 		uri := filepath.Join(root, r.RequestURI)
 
 		if filepath.Ext(uri) != ".php" && Exists(uri) {
@@ -104,7 +100,7 @@ func main() {
 
 		gofast.NewHandler(
 			gofast.NewFileEndpoint(filepath.Join(root, "index.php"))(gofast.BasicSession),
-			clientFactory,
+			pool.CreateClient,
 		).ServeHTTP(w, r)
 	})
 	cert, key := getCACerts()
