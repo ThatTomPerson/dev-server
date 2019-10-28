@@ -3,6 +3,7 @@ package main // import "ttp.sh/dev-server"
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -10,7 +11,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/yookoala/gofast"
 	"ttp.sh/dev-server/devtls"
 
@@ -48,8 +48,8 @@ func startFpm() {
 	child.Stdout = os.Stdout
 	child.Stderr = os.Stderr
 
-	logrus.Info("Running php-fpm")
-	logrus.Fatal(child.Run())
+	log.Println("Running php-fpm")
+	log.Fatal(child.Run())
 }
 
 func getSiteRoot(r *http.Request) string {
@@ -102,16 +102,17 @@ func main() {
 		fcgiAddress = "127.0.0.1:9000"
 	}
 
-	logrus.Infof("connecting to FASTCGI on %s", fcgiAddress)
+	log.Printf("connecting to FASTCGI on %s\n", fcgiAddress)
 
 	connFactory := gofast.SimpleConnFactory("tcp", fcgiAddress)
 	clientFactory := gofast.SimpleClientFactory(connFactory, 20)
 	_ = clientFactory
-	logrus.Infof("using pool")
+
 	handler := gofast.NewHandler(
 		NewSitesEndpoint()(gofast.BasicSession),
 		clientFactory,
 	)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		r.Host = fmt.Sprintf("%s:%s", r.TLS.ServerName, port)
 		root := getSiteRoot(r)
@@ -125,7 +126,7 @@ func main() {
 
 	cert, key := getCACerts()
 	address := fmt.Sprintf("%s:%s", host, port)
-	logrus.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
+	log.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
 }
 
 func getCACerts() ([]byte, []byte) {
@@ -135,11 +136,11 @@ func getCACerts() ([]byte, []byte) {
 
 	cert, err := ioutil.ReadFile(certPath)
 	if err != nil {
-		logrus.Fatal("Couldn't find cert: %s", certPath)
+		log.Fatalf("Couldn't find cert: %s", certPath)
 	}
 	key, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		logrus.Fatal("Couldn't find key: %s", keyPath)
+		log.Fatalf("Couldn't find key: %s", keyPath)
 	}
 
 	return cert, key
