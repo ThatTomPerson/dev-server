@@ -113,6 +113,7 @@ func main() {
 		clientFactory,
 	)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		r.Host = fmt.Sprintf("%s:%s", r.TLS.ServerName, port)
 		root := getSiteRoot(r)
 		if Exists(filepath.Join(root, r.URL.Path)) {
 			http.ServeFile(w, r, filepath.Join(root, r.URL.Path))
