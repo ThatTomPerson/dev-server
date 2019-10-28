@@ -56,7 +56,7 @@ type Config struct {
 
 // CertificateGenerator generates new certs from a config and a ClientHelloInfo
 type CertificateGenerator struct {
-	sync.Mutex
+	sync.RWMutex
 	config *Config
 	cache  map[string]*tls.Certificate
 }
@@ -71,12 +71,15 @@ func NewCertificateGenerator(config *Config) *CertificateGenerator {
 
 // GetCertificate satifies the tls.GetCertificate func
 func (s *CertificateGenerator) GetCertificate(h *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	s.Lock()
-	defer s.Unlock()
+	s.RLock()
 	if c, ok := s.cache[h.ServerName]; ok {
+		s.RUnlock()
 		return c, nil
 	}
+	s.RUnlock()
 
+	s.Lock()
+	defer s.Unlock()
 	c, err := s.NewCertificate(h)
 	if err != nil {
 		return nil, err

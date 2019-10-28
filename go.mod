@@ -5,6 +5,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/apex/log v1.1.0
 	github.com/davecgh/go-spew v1.1.1
+	github.com/eternnoir/gncp v0.0.0-20170707042257-c70df2d0cd68
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/rakyll/autopprof v0.0.0-20181122020629-ddc8858424e3
 	github.com/ramr/go-reaper v0.0.0-20170814234526-35f6a64e44ff

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 	"github.com/yookoala/gofast"
 	"ttp.sh/dev-server/devtls"
@@ -60,6 +60,32 @@ func getSiteRoot(r *http.Request) string {
 	return filepath.Join(path, "sites", site, "public")
 }
 
+func NewSitesEndpoint() gofast.Middleware {
+	return gofast.Chain(
+		gofast.BasicParamsMap,
+		gofast.MapHeader,
+		MapEndpoint,
+	)
+}
+
+func MapEndpoint(inner gofast.SessionHandler) gofast.SessionHandler {
+	return func(client gofast.Client, req *gofast.Request) (*gofast.ResponsePipe, error) {
+		r := req.Raw
+		dir := getSiteRoot(r)
+		webpath := "/index.php"
+		fullPath := filepath.Join(dir, webpath)
+		req.Params["REQUEST_URI"] = r.URL.RequestURI()
+		req.Params["SCRIPT_NAME"] = webpath
+		req.Params["SCRIPT_FILENAME"] = fullPath
+		req.Params["DOCUMENT_URI"] = r.URL.Path
+		req.Params["DOCUMENT_ROOT"] = dir
+
+		spew.Dump(req.Params)
+
+		return inner(client, req)
+	}
+}
+
 func main() {
 	flag.Parse()
 	if reap {
@@ -79,30 +105,26 @@ func main() {
 		fcgiAddress = "127.0.0.1:9000"
 	}
 
+	logrus.Infof("connecting to FASTCGI on %s", fcgiAddress)
+
 	connFactory := gofast.SimpleConnFactory("tcp", fcgiAddress)
-
-	pool := gofast.NewClientPool(
-		gofast.SimpleClientFactory(connFactory, 0),
-		10,             // buffer size for pre-created client-connection
-		30*time.Second, // life span of a client before expire
+	clientFactory := gofast.SimpleClientFactory(connFactory, 20)
+	_ = clientFactory
+	logrus.Infof("using pool")
+	handler := gofast.NewHandler(
+		NewSitesEndpoint()(gofast.BasicSession),
+		clientFactory,
 	)
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		root := getSiteRoot(r)
-		uri := filepath.Join(root, r.RequestURI)
-
-		if filepath.Ext(uri) != ".php" && Exists(uri) {
-			http.ServeFile(w, r, uri)
+		if Exists(filepath.Join(root, r.URL.Path)) {
+			http.ServeFile(w, r, filepath.Join(root, r.URL.Path))
 			return
 		}
 
-		r.Host = fmt.Sprintf("%s:%s", r.TLS.ServerName, port)
-
-		gofast.NewHandler(
-			gofast.NewFileEndpoint(filepath.Join(root, "index.php"))(gofast.BasicSession),
-			pool.CreateClient,
-		).ServeHTTP(w, r)
+		handler.ServeHTTP(w, r)
 	})
+
 	cert, key := getCACerts()
 	address := fmt.Sprintf("%s:%s", host, port)
 	logrus.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
