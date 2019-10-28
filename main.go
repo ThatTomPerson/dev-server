@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 	"github.com/yookoala/gofast"
 	"ttp.sh/dev-server/devtls"
@@ -71,16 +70,14 @@ func NewSitesEndpoint() gofast.Middleware {
 func MapEndpoint(inner gofast.SessionHandler) gofast.SessionHandler {
 	return func(client gofast.Client, req *gofast.Request) (*gofast.ResponsePipe, error) {
 		r := req.Raw
-		dir := getSiteRoot(r)
-		webpath := "/index.php"
-		fullPath := filepath.Join(dir, webpath)
+		endpointFile := filepath.Join(getSiteRoot(r), "index.php")
+		dir, webpath := filepath.Dir(endpointFile), "/"+filepath.Base(endpointFile)
+
 		req.Params["REQUEST_URI"] = r.URL.RequestURI()
 		req.Params["SCRIPT_NAME"] = webpath
-		req.Params["SCRIPT_FILENAME"] = fullPath
+		req.Params["SCRIPT_FILENAME"] = filepath.Join(dir, webpath)
 		req.Params["DOCUMENT_URI"] = r.URL.Path
 		req.Params["DOCUMENT_ROOT"] = dir
-
-		spew.Dump(req.Params)
 
 		return inner(client, req)
 	}
@@ -172,8 +169,4 @@ func getCAROOT() string {
 		dir = filepath.Join(dir, ".local", "share")
 	}
 	return filepath.Join(dir, "mkcert")
-}
-
-func FileFSMiddleware(root string) gofast.Middleware {
-	return nil
 }
