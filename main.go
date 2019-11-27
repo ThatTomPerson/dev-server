@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -59,15 +60,15 @@ func getSiteRoot(r *http.Request) string {
 	return filepath.Join(path, "sites", site, "public")
 }
 
-func NewSitesEndpoint() gofast.Middleware {
+func newSitesEndpoint() gofast.Middleware {
 	return gofast.Chain(
 		gofast.BasicParamsMap,
 		gofast.MapHeader,
-		MapEndpoint,
+		mapEndpoint,
 	)
 }
 
-func MapEndpoint(inner gofast.SessionHandler) gofast.SessionHandler {
+func mapEndpoint(inner gofast.SessionHandler) gofast.SessionHandler {
 	return func(client gofast.Client, req *gofast.Request) (*gofast.ResponsePipe, error) {
 		r := req.Raw
 		endpointFile := filepath.Join(getSiteRoot(r), "index.php")
@@ -105,11 +106,11 @@ func main() {
 	log.Printf("connecting to FASTCGI on %s\n", fcgiAddress)
 
 	connFactory := gofast.SimpleConnFactory("tcp", fcgiAddress)
-	clientFactory := gofast.SimpleClientFactory(connFactory, 20)
+	clientFactory := gofast.SimpleClientFactory(connFactory, 0)
 	_ = clientFactory
 
 	handler := gofast.NewHandler(
-		NewSitesEndpoint()(gofast.BasicSession),
+		newSitesEndpoint()(gofast.BasicSession),
 		clientFactory,
 	)
 
@@ -126,11 +127,28 @@ func main() {
 
 	cert, key := getCACerts()
 	address := fmt.Sprintf("%s:%s", host, port)
+
+	go redirectToHTTPS(port)
 	log.Fatal(devtls.ListenAndServeTLS(address, cert, key, nil))
 }
 
+func redirectToHTTPS(port string) {
+	httpSrv := http.Server{
+		Addr: ":80",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			host, _, _ := net.SplitHostPort(r.Host)
+			u := r.URL
+			u.Host = net.JoinHostPort(host, port)
+			u.Scheme = "https"
+			log.Println(u.String())
+			http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+		}),
+	}
+	log.Println(httpSrv.ListenAndServe())
+}
+
 func getCACerts() ([]byte, []byte) {
-	root := getCAROOT()
+	root := getCARoot()
 	certPath := filepath.Join(root, "rootCA.pem")
 	keyPath := filepath.Join(root, "rootCA-key.pem")
 
@@ -146,7 +164,7 @@ func getCACerts() ([]byte, []byte) {
 	return cert, key
 }
 
-func getCAROOT() string {
+func getCARoot() string {
 	if env := os.Getenv("CAROOT"); env != "" {
 		return env
 	}

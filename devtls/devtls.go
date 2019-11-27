@@ -109,8 +109,8 @@ func (s *CertificateGenerator) NewCertificate(h *tls.ClientHelloInfo) (*tls.Cert
 			Organization: []string{"mkcert development certificate"},
 		},
 
-		NotAfter:  time.Now().AddDate(10, 0, 0),
-		NotBefore: time.Now().AddDate(-10, 0, 0),
+		NotAfter:  time.Now().AddDate(0, 0, 180),
+		NotBefore: time.Now().AddDate(0, 0, -10),
 
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
